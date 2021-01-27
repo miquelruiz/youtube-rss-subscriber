@@ -9,7 +9,7 @@ from sqlalchemy.orm.session import sessionmaker, Session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import or_
 from tabulate import tabulate
-from youtube_rss_subscriber import config, download, schema
+from youtube_rss_subscriber import config, download as dl, schema
 
 
 def retrieve_videos(channel: schema.Channel) -> Iterator[schema.Video]:
@@ -118,7 +118,7 @@ def update(ctx: click.Context, dryrun: bool, no_download: bool) -> None:
                 print("URL: ", video.url)
 
                 if channel.autodownload:
-                    download.download(video.url, dryrun=dryrun or no_download)
+                    dl.download(video.url, dryrun=dryrun or no_download)
                     video.downloaded = 1
                 else:
                     video.downloaded = 0
@@ -170,6 +170,19 @@ def unsubscribe(ctx: click.Context, channel: str, dryrun: bool) -> None:
     session.delete(channel_obj)
     if not dryrun:
         session.commit()
+
+
+@main.command()
+@click.pass_context
+@click.argument("video_id")
+@click.option("--dryrun", is_flag=True, default=False)
+def download(ctx: click.Context, video_id: str, dryrun: bool) -> None:
+    session = ctx.obj["dbsession"]
+    video = session.query(schema.Video).filter_by(id=video_id).one_or_none()
+    if not video:
+        print("The video ID provided was not found", file=sys.stderr)
+        sys.exit(1)
+    dl.download(video.url, dryrun=dryrun)
 
 
 if __name__ == "__main__":
