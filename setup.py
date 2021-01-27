@@ -20,7 +20,7 @@ setuptools.setup(
     ],
     python_requires=">=3.6",
     install_requires=[
-        "beautifulsoup4", "click", "lxml", "pyyaml", "sqlalchemy",
+        "beautifulsoup4", "click", "lxml", "pyyaml", "sqlalchemy", "tabulate"
     ],
     entry_points={"console_scripts": ["yrs=youtube_rss_subscriber:main"]},
 )

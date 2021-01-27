@@ -1,13 +1,12 @@
-from typing import Any, Iterator
+from typing import Iterator
 import sys
 
 from bs4 import BeautifulSoup
 import click
 import requests
-
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import sessionmaker
-
+from tabulate import tabulate
 from youtube_rss_subscriber import config, download, schema
 
 
@@ -20,7 +19,7 @@ def retrieve_videos(channel: schema.Channel) -> Iterator[schema.Video]:
 
 @click.group()
 @click.pass_context
-def main(ctx: Any) -> None:
+def main(ctx: click.Context) -> None:
     try:
         conf = config.Config()
     except Exception as e:
@@ -40,7 +39,12 @@ def main(ctx: Any) -> None:
 @click.argument("url")
 @click.option("--autodownload/--no-autodownload", default=True)
 @click.option("--dryrun", is_flag=True, default=False)
-def subscribe(ctx: Any, url: str, autodownload: bool, dryrun: bool) -> None:
+def subscribe(
+    ctx: click.Context,
+    url: str,
+    autodownload: bool,
+    dryrun: bool,
+) -> None:
     session = ctx.obj["dbsession"]
     try:
         r = requests.get(url)
@@ -59,14 +63,14 @@ def subscribe(ctx: Any, url: str, autodownload: bool, dryrun: bool) -> None:
 
     if not dryrun:
         session.commit()
-    print(f"Subscribed to \"{channel.name}\"")
+    print(f'Subscribed to "{channel.name}"')
 
 
 @main.command()
 @click.pass_context
 @click.option("--dryrun", is_flag=True, default=False)
 @click.option("--no-download", is_flag=True, default=False)
-def update(ctx: Any, dryrun: bool, no_download: bool) -> None:
+def update(ctx: click.Context, dryrun: bool, no_download: bool) -> None:
     session = ctx.obj["dbsession"]
     for channel in session.query(schema.Channel).all():
         for video in retrieve_videos(channel):
@@ -85,6 +89,18 @@ def update(ctx: Any, dryrun: bool, no_download: bool) -> None:
                 session.merge(video)
     if not dryrun:
         session.commit()
+
+
+@main.command()
+@click.pass_context
+def list_channels(ctx: click.Context) -> None:
+    session = ctx.obj["dbsession"]
+    rows = []
+    for channel in session.query(schema.Channel):
+        rows.append([
+            channel.id, channel.name, channel.url, channel.autodownload,
+        ])
+    print(tabulate(rows, headers=["ID", "Name", "URL", "Autodownload"]))
 
 
 if __name__ == "__main__":
