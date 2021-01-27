@@ -67,8 +67,4 @@ class Video(Base):  # type: ignore
 
 
 def ensure_schema(engine: Engine) -> None:
-    # if not all(
-    #     engine.has_table(cls.__tablename__)  # type: ignore
-    #     for cls in (Video, Channel)
-    # ):
     Base.metadata.create_all(engine)
