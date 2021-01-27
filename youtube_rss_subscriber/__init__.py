@@ -155,9 +155,9 @@ def list_videos(ctx: click.Context, channel: str) -> None:
 
     rows = []
     for v in channel_obj.videos:
-        rows.append([v.id, v.title, v.url, v.downloaded])
+        rows.append([v.id, v.title, v.url, v.published, v.downloaded])
 
-    print(tabulate(rows, headers=["ID", "Title", "URL", "Downloaded"]))
+    print(tabulate(rows, headers=["ID", "Title", "URL", "Published", "Downloaded"]))
 
 
 @main.command()

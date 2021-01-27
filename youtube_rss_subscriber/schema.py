@@ -1,7 +1,8 @@
+import dateutil.parser
 from typing import Any
 
 from bs4 import BeautifulSoup
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -52,6 +53,7 @@ class Video(Base):  # type: ignore
     id = Column(String(64), primary_key=True)
     url = Column(String(256), nullable=False)
     title = Column(String(256), nullable=False)
+    published = Column(DateTime, nullable=False)
     channel_id = Column(Integer, ForeignKey("channels.id"), nullable=False)
     downloaded = Column(Integer, nullable=False)
     channel = relationship(Channel)  # type: ignore
@@ -62,6 +64,7 @@ class Video(Base):  # type: ignore
             id=soup.find_all(["yt:videoid", "yt:videoId"]).pop().text,
             url=soup.link["href"],
             title=soup.title.text,
+            published=dateutil.parser.isoparse(soup.published.text),
             channel=channel,
         )
 
