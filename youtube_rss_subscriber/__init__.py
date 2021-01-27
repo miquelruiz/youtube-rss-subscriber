@@ -50,12 +50,18 @@ def subscribe(
     session = ctx.obj["dbsession"]
     try:
         r = requests.get(url)
+        r.raise_for_status()
     except Exception as e:
         print(str(e), file=sys.stderr)
         sys.exit(1)
 
     soup = BeautifulSoup(r.text, "html.parser")
-    channel = schema.Channel.from_soup(soup, url)
+    try:
+        channel = schema.Channel.from_soup(soup, url)
+    except Exception:
+        print(f"Couldn't subscribe to {url}. Is the URL correct?", file=sys.stderr)
+        sys.exit(1)
+
     channel.autodownload = autodownload
     session.merge(channel)
 
