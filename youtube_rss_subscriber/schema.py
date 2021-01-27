@@ -18,6 +18,7 @@ class Channel(Base):  # type: ignore
     name = Column(String(64), nullable=False)
     rss = Column(String(256), nullable=False)
     autodownload = Column(Integer, nullable=False)
+    videos = relationship("Video", cascade="all,delete-orphan")  # type: ignore
 
     @staticmethod
     def rss_filter(tag: Any) -> bool:
