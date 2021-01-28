@@ -107,8 +107,8 @@ def subscribe(
 @main.command()
 @click.pass_context
 @click.option("--dryrun", is_flag=True, default=False)
-@click.option("--no-download", is_flag=True, default=False)
-def update(ctx: click.Context, dryrun: bool, no_download: bool) -> None:
+@click.option("--download/--no-download", default=True)
+def update(ctx: click.Context, dryrun: bool, download: bool) -> None:
     session = ctx.obj["dbsession"]
     for channel in session.query(schema.Channel).all():
         for video in retrieve_videos(channel):
@@ -117,8 +117,8 @@ def update(ctx: click.Context, dryrun: bool, no_download: bool) -> None:
                 print("Title: ", video.title)
                 print("URL: ", video.url)
 
-                if channel.autodownload:
-                    dl.download(video.url, dryrun=dryrun or no_download)
+                if download and channel.autodownload:
+                    dl.download(video.url, dryrun=dryrun)
                     video.downloaded = 1
                 else:
                     video.downloaded = 0
