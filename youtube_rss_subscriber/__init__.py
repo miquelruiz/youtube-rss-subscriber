@@ -69,7 +69,7 @@ def main(ctx: click.Context) -> None:
 @main.command()
 @click.pass_context
 @click.argument("url")
-@click.option("--autodownload/--no-autodownload", default=True)
+@click.option("--autodownload/--no-autodownload", default=False)
 @click.option("--dryrun", is_flag=True, default=False)
 def subscribe(
     ctx: click.Context,
