@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="youtube-rss-subscriber",
-    version="0.0.1.dev1",
+    version="0.0.1",
     author="Miquel Ruiz",
     author_email="self@miquelruiz.net",
     description="Subscribe to YouTube channels without a YouTube account",
