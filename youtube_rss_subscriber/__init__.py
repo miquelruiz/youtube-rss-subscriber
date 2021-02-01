@@ -185,5 +185,18 @@ def download(ctx: click.Context, video_id: str, dryrun: bool) -> None:
     dl.download(video.url, dryrun=dryrun)
 
 
+@main.command()
+@click.pass_context
+@click.argument("channel")
+@click.option("--enable/--disable", is_flag=True, required=True)
+@click.option("--dryrun", is_flag=True, default=False)
+def autodownload(ctx: click.Context, channel: str, enable: bool, dryrun: bool) -> None:
+    session = ctx.obj["dbsession"]
+    channel_obj = find_unique_channel(session, channel)
+    channel_obj.autodownload = 1 if enable else 0
+    if not dryrun:
+        session.commit()
+
+
 if __name__ == "__main__":
     main(obj={})
