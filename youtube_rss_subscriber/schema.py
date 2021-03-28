@@ -19,7 +19,9 @@ class Channel(Base):  # type: ignore
     name = Column(String(64), nullable=False)
     rss = Column(String(256), nullable=False)
     autodownload = Column(Integer, nullable=False)
-    videos = relationship("Video", cascade="all,delete-orphan")  # type: ignore
+    videos = relationship(  # type: ignore
+        "Video", cascade="all,delete-orphan", back_populates="channel"
+    )
 
     @staticmethod
     def rss_filter(tag: Any) -> bool:
@@ -56,7 +58,7 @@ class Video(Base):  # type: ignore
     published = Column(DateTime, nullable=False)
     channel_id = Column(Integer, ForeignKey("channels.id"), nullable=False)
     downloaded = Column(Integer, nullable=False)
-    channel = relationship(Channel)  # type: ignore
+    channel = relationship("Channel", back_populates="videos")  # type: ignore
 
     @classmethod
     def from_soup(cls, soup: BeautifulSoup, channel: Channel) -> "Video":
@@ -65,7 +67,8 @@ class Video(Base):  # type: ignore
             url=soup.link["href"],
             title=soup.title.text,
             published=dateutil.parser.isoparse(soup.published.text),
-            channel=channel,
+            channel_id=channel.id,
+            downloaded=0,
         )
 
 

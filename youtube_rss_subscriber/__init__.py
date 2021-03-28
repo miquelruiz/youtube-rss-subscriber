@@ -113,7 +113,7 @@ def update(ctx: click.Context, dryrun: bool, download: bool) -> None:
     for channel in session.query(schema.Channel).all():
         for video in retrieve_videos(channel):
             if not session.query(schema.Video).filter_by(id=video.id).first():
-                print("Channel: ", video.channel.name)
+                print("Channel: ", channel.name)
                 print("Title: ", video.title)
                 print("URL: ", video.url)
 
