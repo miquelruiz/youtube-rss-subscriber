@@ -1,3 +1,4 @@
+import logging
 from typing import Iterator
 import sys
 
@@ -10,6 +11,9 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import or_
 from tabulate import tabulate
 from youtube_rss_subscriber import config, download as dl, schema
+
+
+log: logging.Logger = logging.getLogger(__name__)
 
 
 def retrieve_videos(channel: schema.Channel) -> Iterator[schema.Video]:
@@ -51,7 +55,10 @@ def find_unique_channel(session: Session, channel_str: str) -> schema.Channel:
 
 @click.group()
 @click.pass_context
-def main(ctx: click.Context) -> None:
+@click.option("--debug", is_flag=True, default=False)
+def main(ctx: click.Context, debug: bool) -> None:
+    logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+
     try:
         conf = config.Config()
     except Exception as e:
