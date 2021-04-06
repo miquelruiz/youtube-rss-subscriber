@@ -53,11 +53,31 @@ def find_unique_channel(session: Session, channel_str: str) -> schema.Channel:
     return channel
 
 
+def add_and_scan_channel(
+    session: Session,
+    channel: schema.Channel,
+    autodownload: bool,
+    dryrun: bool,
+) -> None:
+    channel.autodownload = autodownload
+    session.merge(channel)
+
+    for v in retrieve_videos(channel):
+        v.downloaded = 1
+        session.merge(v)
+
+    if not dryrun:
+        session.commit()
+    print(f'Subscribed to "{channel.name}"')
+
+
 @click.group()
 @click.pass_context
 @click.option("--debug", is_flag=True, default=False)
 def main(ctx: click.Context, debug: bool) -> None:
     logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
+    if debug:
+        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
     try:
         conf = config.Config()
@@ -71,6 +91,7 @@ def main(ctx: click.Context, debug: bool) -> None:
 
     ctx.ensure_object(dict)
     ctx.obj["dbsession"] = session
+    ctx.obj["debug"] = debug
 
 
 @main.command()
@@ -84,7 +105,6 @@ def subscribe(
     autodownload: bool,
     dryrun: bool,
 ) -> None:
-    session = ctx.obj["dbsession"]
     try:
         r = requests.get(url)
         r.raise_for_status()
@@ -96,19 +116,35 @@ def subscribe(
     try:
         channel = schema.Channel.from_soup(soup, url)
     except Exception:
-        print(f"Couldn't subscribe to {url}. Is the URL correct?", file=sys.stderr)
+        msg = f"Couldn't subscribe to {url}. Try with 'subscribe-by-id'"
+        if ctx.obj["debug"]:
+            log.exception(msg)
+        else:
+            print(msg, file=sys.stderr)
         sys.exit(1)
 
-    channel.autodownload = autodownload
-    session.merge(channel)
+    add_and_scan_channel(ctx.obj["dbsession"], channel, autodownload, dryrun)
 
-    for v in retrieve_videos(channel):
-        v.downloaded = 1
-        session.merge(v)
 
-    if not dryrun:
-        session.commit()
-    print(f'Subscribed to "{channel.name}"')
+@main.command()
+@click.pass_context
+@click.argument("channel_id")
+@click.argument("name")
+@click.option("--autodownload/--no-autodownload", default=False)
+@click.option("--dryrun", is_flag=True, default=False)
+def subscribe_by_id(
+    ctx: click.Context,
+    channel_id: str,
+    name: str,
+    autodownload: bool,
+    dryrun: bool
+) -> None:
+    url = f"https://www.youtube.com/channel/{channel_id}"
+    rss = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+    channel = schema.Channel(
+        id=channel_id, url=url, name=name, rss=rss, autodownload=autodownload,
+    )
+    add_and_scan_channel(ctx.obj["dbsession"], channel, autodownload, dryrun)
 
 
 @main.command()
