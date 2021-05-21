@@ -1,5 +1,5 @@
 import logging
-from typing import Iterator
+from typing import Collection
 import sys
 
 from bs4 import BeautifulSoup
@@ -16,11 +16,10 @@ from youtube_rss_subscriber import config, download as dl, schema
 log: logging.Logger = logging.getLogger(__name__)
 
 
-def retrieve_videos(channel: schema.Channel) -> Iterator[schema.Video]:
+def retrieve_videos(channel: schema.Channel) -> Collection[schema.Video]:
     r = requests.get(channel.rss)
     soup = BeautifulSoup(r.text, "xml")
-    for entry in soup.find_all("entry"):
-        yield schema.Video.from_soup(entry, channel)
+    return [schema.Video.from_soup(entry, channel) for entry in soup.find_all("entry")]
 
 
 def find_unique_channel(session: Session, channel_str: str) -> schema.Channel:
@@ -62,7 +61,13 @@ def add_and_scan_channel(
     channel.autodownload = autodownload
     session.merge(channel)
 
-    for v in retrieve_videos(channel):
+    try:
+        videos = retrieve_videos(channel)
+    except Exception as e:
+        print(f"Couldn't retrieve videos: {e}", file=sys.stderr)
+        return
+
+    for v in videos:
         v.downloaded = 1
         session.merge(v)
 
@@ -154,7 +159,13 @@ def subscribe_by_id(
 def update(ctx: click.Context, dryrun: bool, download: bool) -> None:
     session = ctx.obj["dbsession"]
     for channel in session.query(schema.Channel).all():
-        for video in retrieve_videos(channel):
+        try:
+            videos = retrieve_videos(channel)
+        except Exception as e:
+            print(f"Couldn't retrieve videos: {e}", file=sys.stderr)
+            return
+
+        for video in videos:
             if not session.query(schema.Video).filter_by(id=video.id).first():
                 print("Channel: ", channel.name)
                 print("Title: ", video.title)
