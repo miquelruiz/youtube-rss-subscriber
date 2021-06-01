@@ -1,6 +1,7 @@
 import logging
 from typing import Collection
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from bs4 import BeautifulSoup
 import click
@@ -9,6 +10,7 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import sessionmaker, Session
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import or_
+from sqlalchemy.sql.operators import as_
 from tabulate import tabulate
 from youtube_rss_subscriber import config, download as dl, schema
 
@@ -158,27 +160,34 @@ def subscribe_by_id(
 @click.option("--download/--no-download", default=True)
 def update(ctx: click.Context, dryrun: bool, download: bool) -> None:
     session = ctx.obj["dbsession"]
-    for channel in session.query(schema.Channel).all():
-        try:
-            videos = retrieve_videos(channel)
-        except Exception as e:
-            print(f"Couldn't retrieve videos: {e}", file=sys.stderr)
-            return
+    futures = {}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        for channel in session.query(schema.Channel).all():
+            f = pool.submit(retrieve_videos, channel)
+            futures[f] = channel
 
-        for video in videos:
-            if not session.query(schema.Video).filter_by(id=video.id).first():
-                print("Channel: ", channel.name)
-                print("Title: ", video.title)
-                print("URL: ", video.url)
+        for f in as_completed(futures.keys()):
+            try:
+                videos = f.result()
+            except Exception as e:
+                print(f"Couldn't retrieve videos: {e}", file=sys.stderr)
+                return
 
-                if download and channel.autodownload:
-                    dl.download(video.url, dryrun=dryrun)
-                    video.downloaded = 1
-                else:
-                    video.downloaded = 0
+            channel = futures[f]
+            for video in videos:
+                if not session.query(schema.Video).filter_by(id=video.id).first():
+                    print("Channel: ", channel.name)
+                    print("Title: ", video.title)
+                    print("URL: ", video.url)
 
-                print()
-                session.merge(video)
+                    if download and channel.autodownload:
+                        dl.download(video.url, dryrun=dryrun)
+                        video.downloaded = 1
+                    else:
+                        video.downloaded = 0
+
+                    print()
+                    session.merge(video)
     if not dryrun:
         session.commit()
 
