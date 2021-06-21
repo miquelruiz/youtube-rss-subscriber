@@ -82,7 +82,7 @@ def add_and_scan_channel(
 def main(ctx: click.Context, debug: bool) -> None:
     logging.basicConfig(level=logging.DEBUG if debug else logging.INFO)
     if debug:
-        logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+        logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
     try:
         conf = config.Config()
@@ -138,16 +138,16 @@ def subscribe(
 @click.option("--autodownload/--no-autodownload", default=False)
 @click.option("--dryrun", is_flag=True, default=False)
 def subscribe_by_id(
-    ctx: click.Context,
-    channel_id: str,
-    name: str,
-    autodownload: bool,
-    dryrun: bool
+    ctx: click.Context, channel_id: str, name: str, autodownload: bool, dryrun: bool
 ) -> None:
     url = f"https://www.youtube.com/channel/{channel_id}"
     rss = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     channel = schema.Channel(
-        id=channel_id, url=url, name=name, rss=rss, autodownload=autodownload,
+        id=channel_id,
+        url=url,
+        name=name,
+        rss=rss,
+        autodownload=autodownload,
     )
     add_and_scan_channel(ctx.obj["dbsession"], channel, autodownload, dryrun)
 
@@ -212,6 +212,21 @@ def list_videos(ctx: click.Context, channel: str) -> None:
         rows.append([v.id, v.title, v.url, v.published, v.downloaded])
 
     print(tabulate(rows, headers=["ID", "Title", "URL", "Published", "Downloaded"]))
+
+
+@main.command()
+@click.pass_context
+def list_all_videos(ctx: click.Context) -> None:
+    session = ctx.obj["dbsession"]
+    print(
+        tabulate(
+            [
+                [v.id, v.channel.name, v.title, v.url, v.published]
+                for v in session.query(schema.Video)
+            ],
+            headers=["ID", "Channel", "Title", "URL", "Published"],
+        )
+    )
 
 
 @main.command()
