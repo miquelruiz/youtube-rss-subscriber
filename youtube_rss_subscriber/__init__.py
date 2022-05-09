@@ -276,5 +276,27 @@ def autodownload(ctx: click.Context, channel: str, enable: bool, dryrun: bool) -
         session.commit()
 
 
+@main.command()
+@click.pass_context
+def export_subscriptions(ctx: click.Context) -> None:
+    import opyml
+
+    session = ctx.obj["dbsession"]
+    query = session.query(schema.Channel)
+    try:
+        channels = query.all()
+    except Exception as e:
+        print(f"Failed to query channels: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    doc = opyml.OPML()
+    for c in channels:
+        doc.body.outlines.append(
+            opyml.Outline(text=c.name, title=c.name, type="rss", xml_url=c.rss)
+        )
+
+    print(doc.to_xml())
+
+
 if __name__ == "__main__":
     main(obj={})
