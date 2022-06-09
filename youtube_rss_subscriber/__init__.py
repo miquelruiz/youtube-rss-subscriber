@@ -21,7 +21,10 @@ log: logging.Logger = logging.getLogger(__name__)
 def retrieve_videos(channel: schema.Channel) -> Collection[schema.Video]:
     r = requests.get(channel.rss)
     soup = BeautifulSoup(r.text, "xml")
-    return [schema.Video.from_soup(entry, channel) for entry in soup.find_all("entry")]
+    videos = [schema.Video.from_soup(entry, channel) for entry in soup.find_all("entry")]
+    # reverse because they come newest to oldest, and it's better to return them oldest to newest
+    videos.reverse()
+    return videos
 
 
 def find_unique_channel(session: Session, channel_str: str) -> schema.Channel:
