@@ -1,3 +1,6 @@
+| :exclamation:  This repository is now read-only in favor of https://github.com/miquelruiz/yrs |
+|-----------------------------------------------------------------------------------------------|
+
 # YouTube RSS Subscriber
 
 YouTube RSS Subscriber (`yrs`) allows you to subscribe to YouTube channels without the
